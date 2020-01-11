@@ -1,0 +1,34 @@
+{
+  "name": "resilient-server-session",
+  "version": "1.0.1",
+  "description": "Monitor process oversees server workers to create a persistent, event rich session.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "mocha --reporter spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samwilkins333/ResilientServerSession.git"
+  },
+  "author": "Sam Wilkins <samwilkins333@gmail.com> (http://www.samwilkins.me)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/samwilkins333/ResilientServerSession/issues"
+  },
+  "homepage": "https://github.com/samwilkins333/ResilientServerSession#readme",
+  "dependencies": {
+    "@types/node": "^13.1.6",
+    "@types/request-promise": "^4.1.45",
+    "@types/uuid": "^3.4.6",
+    "chai": "^4.2.0",
+    "colors": "^1.4.0",
+    "jsonschema": "^1.2.5",
+    "mocha": "^7.0.0",
+    "node": "^13.6.0",
+    "request-promise": "^4.2.5",
+    "typescript": "^3.7.4",
+    "uuid": "^3.3.3"
+  }
+}
