@@ -81,7 +81,7 @@ export class ServerWorker extends ProcessMessageRouter {
         // updates the local values of variables to the those sent from master
         this.on("updatePollingInterval", ({ newPollingIntervalSeconds }) => this.pollingIntervalSeconds = newPollingIntervalSeconds);
         this.on("manualExit", async ({ isSessionEnd }) => {
-            ServerWorker.IPCManager.destroy();
+            await ServerWorker.IPCManager.destroy();
             await this.executeExitHandlers(isSessionEnd);
             process.exit(0);
         });
