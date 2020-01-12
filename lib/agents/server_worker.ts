@@ -55,7 +55,7 @@ export class ServerWorker extends ProcessMessageRouter {
      * A convenience wrapper to tell the session monitor (parent process)
      * to carry out the action with the specified message and arguments.
      */
-    public emit = ServerWorker.IPCManager.emit;
+    public emit = async <T = any>(name: string, args?: any) => ServerWorker.IPCManager.emit<T>(name, args);
 
     private constructor(work: Function) {
         super();
@@ -103,7 +103,7 @@ export class ServerWorker extends ProcessMessageRouter {
     /**
      * Notify master thread (which will log update in the console) of initialization via IPC.
      */
-    public lifecycleNotification = (event: string) => ServerWorker.IPCManager.emit("lifecycle", { event });
+    public lifecycleNotification = (event: string) => this.emit("lifecycle", { event });
 
     /**
      * Called whenever the process has a reason to terminate, either through an uncaught exception

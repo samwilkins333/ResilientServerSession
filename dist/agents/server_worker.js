@@ -87,7 +87,9 @@ var ServerWorker = /** @class */ (function (_super) {
          * A convenience wrapper to tell the session monitor (parent process)
          * to carry out the action with the specified message and arguments.
          */
-        _this.emit = ServerWorker.IPCManager.emit;
+        _this.emit = function (name, args) { return __awaiter(_this, void 0, void 0, function () { return __generator(this, function (_a) {
+            return [2 /*return*/, ServerWorker.IPCManager.emit(name, args)];
+        }); }); };
         /**
          * Set up message and uncaught exception handlers for this
          * server process.
@@ -103,10 +105,11 @@ var ServerWorker = /** @class */ (function (_super) {
                 return __awaiter(_this, void 0, void 0, function () {
                     return __generator(this, function (_b) {
                         switch (_b.label) {
-                            case 0:
-                                ServerWorker.IPCManager.destroy();
-                                return [4 /*yield*/, this.executeExitHandlers(isSessionEnd)];
+                            case 0: return [4 /*yield*/, ServerWorker.IPCManager.destroy()];
                             case 1:
+                                _b.sent();
+                                return [4 /*yield*/, this.executeExitHandlers(isSessionEnd)];
+                            case 2:
                                 _b.sent();
                                 process.exit(0);
                                 return [2 /*return*/];
@@ -131,7 +134,7 @@ var ServerWorker = /** @class */ (function (_super) {
         /**
          * Notify master thread (which will log update in the console) of initialization via IPC.
          */
-        _this.lifecycleNotification = function (event) { return ServerWorker.IPCManager.emit("lifecycle", { event: event }); };
+        _this.lifecycleNotification = function (event) { return _this.emit("lifecycle", { event: event }); };
         /**
          * Called whenever the process has a reason to terminate, either through an uncaught exception
          * in the process (potentially inconsistent state) or the server cannot be reached.
@@ -149,7 +152,9 @@ var ServerWorker = /** @class */ (function (_super) {
                         // notify master thread (which will log update in the console) of crash event via IPC
                         this.lifecycleNotification(colors_1.red("crash event detected @ " + new Date().toUTCString()));
                         this.lifecycleNotification(colors_1.red(error.message));
-                        ServerWorker.IPCManager.destroy();
+                        return [4 /*yield*/, ServerWorker.IPCManager.destroy()];
+                    case 2:
+                        _a.sent();
                         process.exit(1);
                         return [2 /*return*/];
                 }
