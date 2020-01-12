@@ -53,7 +53,7 @@ var AppliedSessionAgent = /** @class */ (function () {
     Object.defineProperty(AppliedSessionAgent.prototype, "sessionMonitor", {
         get: function () {
             if (!cluster_1.isMaster) {
-                this.serverWorker.emitToMonitor("kill", {
+                this.serverWorker.emit("kill", {
                     graceful: false,
                     reason: "Cannot access the session monitor directly from the server worker thread.",
                     errorCode: 1

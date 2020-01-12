@@ -5,14 +5,20 @@ import { ChildProcess } from "child_process";
  * Convenience constructor
  * @param target the process / worker to which to attach the specialized listeners 
  */
-export function IPC_Promisify(target: IPCTarget, handlers?: HandlerMap) {
+export function manage(target: IPCTarget, handlers?: HandlerMap) {
     return new PromisifiedIPCManager(target, handlers);
 }
 
+/**
+ * Captures the logic to execute upon receiving a message
+ * of a certain name.
+ */
 export type HandlerMap = { [name: string]: MessageHandler[] };
 
 /**
- * Essentially, a node process or node cluster worker
+ * This will always literally be a child process. But, though setting
+ * up a manager in the parent will indeed see the target as the ChildProcess,
+ * setting up a manager in the child will just see itself as a regular NodeJS.Process. 
  */
 export type IPCTarget = NodeJS.Process | ChildProcess;
 
@@ -21,7 +27,7 @@ export type IPCTarget = NodeJS.Process | ChildProcess;
  */
 export type Message<T = any> = {
     name: string;
-    args: T;
+    args?: T;
 };
 export type MessageHandler<T = any> = (args: T) => (any | Promise<any>);
 
@@ -29,12 +35,25 @@ export type MessageHandler<T = any> = (args: T) => (any | Promise<any>);
  * When a message is emitted, it is embedded with private metadata
  * to facilitate the resolution of promises, etc.
  */
-interface InternalMessage extends Message { metadata: any };
+interface InternalMessage extends Message { metadata: Metadata }
+interface Metadata { isResponse: boolean; id: string }
 type InternalMessageHandler = (message: InternalMessage) => (any | Promise<any>);
 
+/**
+ * Allows for the transmission of the error's key features over IPC.
+ */
+export interface ErrorLike {
+    name?: string;
+    message?: string;
+    stack?: string;
+}
+
+/**
+ * The arguments returned in a message sent from the target upon completion.
+ */
 export interface Response<T = any> {
-    results?: T[],
-    error?: Error
+    results?: T[];
+    error?: ErrorLike;
 }
 
 /**
@@ -43,21 +62,19 @@ export interface Response<T = any> {
  * other processes listening to its emission of this event have completed. 
  */
 export class PromisifiedIPCManager {
-    public readonly target: IPCTarget;
+    private readonly target: IPCTarget;
+    private pendingMessages: { [id: string]: string } = {};
+    private isDestroyed = false;
+    private get callerIsTarget() {
+        return process.pid === this.target.pid;
+    }
 
     constructor(target: IPCTarget, handlers?: HandlerMap) {
         this.target = target;
         if (handlers) {
-            this.target.addListener("message", this.internalHandler(handlers));
+            this.target.addListener("message", this.generateInternalHandler(handlers));
         }
-    }
-
-    /**
-     * A convenience wrapper around the standard process emission.
-     * Does not wait for a response. 
-     */
-    public emit = (name: string, args?: any): void => {
-        this.target.send?.({ name, args });
+        this.target.addListener("message", ({ destroy }) => destroy === true && this.destroyHelper());
     }
 
     /**
@@ -65,7 +82,11 @@ export class PromisifiedIPCManager {
      * message listener that waits for a response with the same id before resolving
      * the promise.
      */
-    public emitPromise = async <T = any>(name: string, args?: any): Promise<Response<T>> => {
+    public emit = async <T = any>(name: string, args?: any): Promise<Response<T>> => {
+        if (this.isDestroyed) {
+            const error = { name: "FailedDispatch", message: "Cannot use a destroyed IPC manager to emit a message." };
+            return { error };
+        }
         return new Promise<Response<T>>(resolve => {
             const messageId = Utilities.guid();
             const responseHandler: InternalMessageHandler = ({ metadata: { id, isResponse }, args }) => {
@@ -75,8 +96,38 @@ export class PromisifiedIPCManager {
                 }
             };
             this.target.addListener("message", responseHandler);
-            const message = { name, args, metadata: { id: messageId } };
-            this.target.send?.(message);
+            const message = { name, args, metadata: { id: messageId, isResponse: false } };
+            if (!(this.target.send && this.target.send(message))) {
+                const error: ErrorLike = { name: "FailedDispatch", message: "Either the target's send method was undefined or the act of sending failed." };
+                resolve({ error });
+                this.target.removeListener("message", responseHandler);
+            }
+        });
+    }
+
+    /**
+     * Invoked from either the parent or the child process, this allows
+     * any unresolved promises to continue in the target process, but dispatches a dummy
+     * completion response for each of the pending messages, allowing their
+     * promises in the caller to resolve.
+     */
+    public destroy = () => {
+        if (this.callerIsTarget) {
+            this.destroyHelper();
+        } else {
+            this.target.send?.({ destroy: true });
+        }
+    }
+
+    /**
+     * Dispatches the dummy responses and sets the isDestroyed flag to true.
+     */
+    private destroyHelper = () => {
+        this.isDestroyed = true;
+        Object.keys(this.pendingMessages).forEach(id => {
+            const error: ErrorLike = { name: "ManagerDestroyed", message: "The IPC manager was destroyed before the response could be returned." };
+            const message: InternalMessage = { name: this.pendingMessages[id], args: { error }, metadata: { id, isResponse: true } };
+            this.target.send?.(message)
         });
     }
 
@@ -87,10 +138,13 @@ export class PromisifiedIPCManager {
      * which will ultimately invoke the responseHandler of the original emission and resolve the
      * sender's promise.
      */
-    private internalHandler = (handlers: HandlerMap): MessageHandler => async ({ name, args, metadata }: InternalMessage) => {
-        if (name && (!metadata || !metadata.isResponse)) {
+    private generateInternalHandler = (handlers: HandlerMap): MessageHandler => async (message: InternalMessage) => {
+        const { name, args, metadata } = message;
+        if (name && metadata && !metadata.isResponse) {
+            const { id } = metadata;
+            this.pendingMessages[id] = name;
             let error: Error | undefined;
-            let results: any[] | undefined ;
+            let results: any[] | undefined;
             try {
                 const registered = handlers[name];
                 if (registered) {
@@ -99,10 +153,12 @@ export class PromisifiedIPCManager {
             } catch (e) {
                 error = e;
             }
-            if (metadata && this.target.send) {
-                metadata.isResponse = true;
+            if (!this.isDestroyed && this.target.send) {
+                const metadata = { id, isResponse: true };
                 const response: Response = { results , error };
-                this.target.send({ name, args: response , metadata });
+                const message = { name, args: response , metadata };
+                delete this.pendingMessages[id];
+                this.target.send(message);
             }
         }
     }

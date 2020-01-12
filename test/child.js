@@ -37,21 +37,23 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 exports.__esModule = true;
 var promisified_ipc_manager_1 = require("../dist/agents/promisified_ipc_manager");
-promisified_ipc_manager_1.IPC_Promisify(process, {
-    wait: [function (_a) {
-            var seconds = _a.seconds, parentPid = _a.parentPid;
-            return __awaiter(void 0, void 0, void 0, function () {
-                return __generator(this, function (_b) {
-                    switch (_b.label) {
-                        case 0: 
-                        // console.log("CHILD", seconds, parentPid, process.pid);
-                        return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, 1000 * seconds); })];
-                        case 1:
-                            // console.log("CHILD", seconds, parentPid, process.pid);
-                            _b.sent();
-                            return [2 /*return*/, "Hey, " + parentPid + "! What a long wait that was. I'm " + process.pid + "."];
-                    }
-                });
-            });
-        }]
-});
+function onWait(_a) {
+    var milliseconds = _a.milliseconds, parentPid = _a.parentPid;
+    return __awaiter(this, void 0, void 0, function () {
+        var parentSecret;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0: return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, milliseconds); })];
+                case 1:
+                    _b.sent();
+                    return [4 /*yield*/, manager.emit("requestSecret")];
+                case 2:
+                    parentSecret = (_b.sent()).results[0];
+                    return [2 /*return*/, "Hey, " + parentPid + "! What a long wait that was. I'm " + process.pid + ". Your secret is " + parentSecret];
+            }
+        });
+    });
+}
+;
+var localHandlers = { wait: [onWait] };
+var manager = promisified_ipc_manager_1.manage(process, localHandlers);

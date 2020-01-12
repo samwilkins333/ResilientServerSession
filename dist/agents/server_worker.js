@@ -81,14 +81,13 @@ var ServerWorker = /** @class */ (function (_super) {
         _this.killSession = function (reason, graceful, errorCode) {
             if (graceful === void 0) { graceful = true; }
             if (errorCode === void 0) { errorCode = 0; }
-            return _this.emitToMonitor("kill", { reason: reason, graceful: graceful, errorCode: errorCode });
+            return _this.emit("kill", { reason: reason, graceful: graceful, errorCode: errorCode });
         };
         /**
          * A convenience wrapper to tell the session monitor (parent process)
          * to carry out the action with the specified message and arguments.
          */
-        _this.emitToMonitor = function (name, args) { return ServerWorker.IPCManager.emit(name, args); };
-        _this.emitToMonitorPromise = function (name, args) { return ServerWorker.IPCManager.emitPromise(name, args); };
+        _this.emit = ServerWorker.IPCManager.emit;
         /**
          * Set up message and uncaught exception handlers for this
          * server process.
@@ -104,7 +103,9 @@ var ServerWorker = /** @class */ (function (_super) {
                 return __awaiter(_this, void 0, void 0, function () {
                     return __generator(this, function (_b) {
                         switch (_b.label) {
-                            case 0: return [4 /*yield*/, this.executeExitHandlers(isSessionEnd)];
+                            case 0:
+                                ServerWorker.IPCManager.destroy();
+                                return [4 /*yield*/, this.executeExitHandlers(isSessionEnd)];
                             case 1:
                                 _b.sent();
                                 process.exit(0);
@@ -141,13 +142,14 @@ var ServerWorker = /** @class */ (function (_super) {
                     case 0:
                         this.shouldServerBeResponsive = false;
                         // communicates via IPC to the master thread that it should dispatch a crash notification email
-                        this.emitToMonitor(monitor_1.Monitor.IntrinsicEvents.CrashDetected, { error: error });
+                        this.emit(monitor_1.Monitor.IntrinsicEvents.CrashDetected, { error: error });
                         return [4 /*yield*/, this.executeExitHandlers(error)];
                     case 1:
                         _a.sent();
                         // notify master thread (which will log update in the console) of crash event via IPC
                         this.lifecycleNotification(colors_1.red("crash event detected @ " + new Date().toUTCString()));
                         this.lifecycleNotification(colors_1.red(error.message));
+                        ServerWorker.IPCManager.destroy();
                         process.exit(1);
                         return [2 /*return*/];
                 }
@@ -174,7 +176,7 @@ var ServerWorker = /** @class */ (function (_super) {
                                             if (!this.shouldServerBeResponsive) {
                                                 // notify monitor thread that the server is up and running
                                                 this.lifecycleNotification(colors_1.green("listening on " + this.serverPort + "..."));
-                                                this.emitToMonitor(monitor_1.Monitor.IntrinsicEvents.ServerRunning, { isFirstTime: !this.isInitialized });
+                                                this.emit(monitor_1.Monitor.IntrinsicEvents.ServerRunning, { isFirstTime: !this.isInitialized });
                                                 this.isInitialized = true;
                                             }
                                             this.shouldServerBeResponsive = true;

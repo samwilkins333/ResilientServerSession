@@ -41,11 +41,10 @@ var utilities_1 = require("../utilities/utilities");
  * Convenience constructor
  * @param target the process / worker to which to attach the specialized listeners
  */
-function IPC_Promisify(target, handlers) {
+function manage(target, handlers) {
     return new PromisifiedIPCManager(target, handlers);
 }
-exports.IPC_Promisify = IPC_Promisify;
-;
+exports.manage = manage;
 /**
  * This is a wrapper utility class that allows the caller process
  * to emit an event and return a promise that resolves when it and all
@@ -54,24 +53,22 @@ exports.IPC_Promisify = IPC_Promisify;
 var PromisifiedIPCManager = /** @class */ (function () {
     function PromisifiedIPCManager(target, handlers) {
         var _this = this;
-        /**
-         * A convenience wrapper around the standard process emission.
-         * Does not wait for a response.
-         */
-        this.emit = function (name, args) {
-            var _a, _b;
-            (_b = (_a = _this.target).send) === null || _b === void 0 ? void 0 : _b.call(_a, { name: name, args: args });
-        };
+        this.pendingMessages = {};
+        this.isDestroyed = false;
         /**
          * This routine uniquely identifies each message, then adds a general
          * message listener that waits for a response with the same id before resolving
          * the promise.
          */
-        this.emitPromise = function (name, args) { return __awaiter(_this, void 0, void 0, function () {
+        this.emit = function (name, args) { return __awaiter(_this, void 0, void 0, function () {
+            var error;
             var _this = this;
             return __generator(this, function (_a) {
+                if (this.isDestroyed) {
+                    error = { name: "FailedDispatch", message: "Cannot use a destroyed IPC manager to emit a message." };
+                    return [2 /*return*/, { error: error }];
+                }
                 return [2 /*return*/, new Promise(function (resolve) {
-                        var _a, _b;
                         var messageId = utilities_1.Utilities.guid();
                         var responseHandler = function (_a) {
                             var _b = _a.metadata, id = _b.id, isResponse = _b.isResponse, args = _a.args;
@@ -81,11 +78,42 @@ var PromisifiedIPCManager = /** @class */ (function () {
                             }
                         };
                         _this.target.addListener("message", responseHandler);
-                        var message = { name: name, args: args, metadata: { id: messageId } };
-                        (_b = (_a = _this.target).send) === null || _b === void 0 ? void 0 : _b.call(_a, message);
+                        var message = { name: name, args: args, metadata: { id: messageId, isResponse: false } };
+                        if (!(_this.target.send && _this.target.send(message))) {
+                            var error = { name: "FailedDispatch", message: "Either the target's send method was undefined or the act of sending failed." };
+                            resolve({ error: error });
+                            _this.target.removeListener("message", responseHandler);
+                        }
                     })];
             });
         }); };
+        /**
+         * Invoked from either the parent or the child process, this allows
+         * any unresolved promises to continue in the target process, but dispatches a dummy
+         * completion response for each of the pending messages, allowing their
+         * promises in the caller to resolve.
+         */
+        this.destroy = function () {
+            var _a, _b;
+            if (_this.callerIsTarget) {
+                _this.destroyHelper();
+            }
+            else {
+                (_b = (_a = _this.target).send) === null || _b === void 0 ? void 0 : _b.call(_a, { destroy: true });
+            }
+        };
+        /**
+         * Dispatches the dummy responses and sets the isDestroyed flag to true.
+         */
+        this.destroyHelper = function () {
+            _this.isDestroyed = true;
+            Object.keys(_this.pendingMessages).forEach(function (id) {
+                var _a, _b;
+                var error = { name: "ManagerDestroyed", message: "The IPC manager was destroyed before the response could be returned." };
+                var message = { name: _this.pendingMessages[id], args: { error: error }, metadata: { id: id, isResponse: true } };
+                (_b = (_a = _this.target).send) === null || _b === void 0 ? void 0 : _b.call(_a, message);
+            });
+        };
         /**
          * This routine receives a uniquely identified message. If the message is itself a response,
          * it is ignored to avoid infinite mutual responses. Otherwise, the routine awaits its completion using whatever
@@ -93,47 +121,60 @@ var PromisifiedIPCManager = /** @class */ (function () {
          * which will ultimately invoke the responseHandler of the original emission and resolve the
          * sender's promise.
          */
-        this.internalHandler = function (handlers) { return function (_a) {
-            var name = _a.name, args = _a.args, metadata = _a.metadata;
-            return __awaiter(_this, void 0, void 0, function () {
-                var error, results, registered, e_1, response;
-                return __generator(this, function (_b) {
-                    switch (_b.label) {
-                        case 0:
-                            if (!(name && (!metadata || !metadata.isResponse))) return [3 /*break*/, 6];
-                            error = void 0;
-                            results = void 0;
-                            _b.label = 1;
-                        case 1:
-                            _b.trys.push([1, 4, , 5]);
-                            registered = handlers[name];
-                            if (!registered) return [3 /*break*/, 3];
-                            return [4 /*yield*/, Promise.all(registered.map(function (handler) { return handler(args); }))];
-                        case 2:
-                            results = _b.sent();
-                            _b.label = 3;
-                        case 3: return [3 /*break*/, 5];
-                        case 4:
-                            e_1 = _b.sent();
-                            error = e_1;
-                            return [3 /*break*/, 5];
-                        case 5:
-                            if (metadata && this.target.send) {
-                                metadata.isResponse = true;
-                                response = { results: results, error: error };
-                                this.target.send({ name: name, args: response, metadata: metadata });
-                            }
-                            _b.label = 6;
-                        case 6: return [2 /*return*/];
-                    }
-                });
+        this.generateInternalHandler = function (handlers) { return function (message) { return __awaiter(_this, void 0, void 0, function () {
+            var name, args, metadata, id, error, results, registered, e_1, metadata_1, response, message_1;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        name = message.name, args = message.args, metadata = message.metadata;
+                        if (!(name && metadata && !metadata.isResponse)) return [3 /*break*/, 6];
+                        id = metadata.id;
+                        this.pendingMessages[id] = name;
+                        error = void 0;
+                        results = void 0;
+                        _a.label = 1;
+                    case 1:
+                        _a.trys.push([1, 4, , 5]);
+                        registered = handlers[name];
+                        if (!registered) return [3 /*break*/, 3];
+                        return [4 /*yield*/, Promise.all(registered.map(function (handler) { return handler(args); }))];
+                    case 2:
+                        results = _a.sent();
+                        _a.label = 3;
+                    case 3: return [3 /*break*/, 5];
+                    case 4:
+                        e_1 = _a.sent();
+                        error = e_1;
+                        return [3 /*break*/, 5];
+                    case 5:
+                        if (!this.isDestroyed && this.target.send) {
+                            metadata_1 = { id: id, isResponse: true };
+                            response = { results: results, error: error };
+                            message_1 = { name: name, args: response, metadata: metadata_1 };
+                            delete this.pendingMessages[id];
+                            this.target.send(message_1);
+                        }
+                        _a.label = 6;
+                    case 6: return [2 /*return*/];
+                }
             });
-        }; };
+        }); }; };
         this.target = target;
         if (handlers) {
-            this.target.addListener("message", this.internalHandler(handlers));
+            this.target.addListener("message", this.generateInternalHandler(handlers));
         }
+        this.target.addListener("message", function (_a) {
+            var destroy = _a.destroy;
+            return destroy === true && _this.destroyHelper();
+        });
     }
+    Object.defineProperty(PromisifiedIPCManager.prototype, "callerIsTarget", {
+        get: function () {
+            return process.pid === this.target.pid;
+        },
+        enumerable: true,
+        configurable: true
+    });
     return PromisifiedIPCManager;
 }());
 exports.PromisifiedIPCManager = PromisifiedIPCManager;

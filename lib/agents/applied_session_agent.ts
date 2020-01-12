@@ -22,7 +22,7 @@ export abstract class AppliedSessionAgent {
     private sessionMonitorRef: Monitor | undefined;
     public get sessionMonitor(): Monitor {
         if (!isMaster) {
-            this.serverWorker.emitToMonitor("kill", {
+            this.serverWorker.emit("kill", {
                 graceful: false,
                 reason: "Cannot access the session monitor directly from the server worker thread.",
                 errorCode: 1

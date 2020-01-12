@@ -2,7 +2,7 @@ import { AppliedSessionAgent, ExitHandler } from "./agents/applied_session_agent
 import { Monitor } from "./agents/monitor";
 import { ServerWorker } from "./agents/server_worker";
 import ProcessMessageRouter from "./agents/process_message_router";
-import { PromisifiedIPCManager, IPCTarget, IPC_Promisify, Message, HandlerMap, MessageHandler } from "./agents/promisified_ipc_manager";
+import { PromisifiedIPCManager, IPCTarget, manage, Message, HandlerMap, MessageHandler } from "./agents/promisified_ipc_manager";
 
 export {
     AppliedSessionAgent,
@@ -12,7 +12,7 @@ export {
     ProcessMessageRouter,
     PromisifiedIPCManager,
     IPCTarget,
-    IPC_Promisify,
+    manage as IPC_Promisify,
     Message,
     HandlerMap,
     MessageHandler

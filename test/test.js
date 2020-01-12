@@ -40,27 +40,61 @@ var chai_1 = require("chai");
 var child_process_1 = require("child_process");
 var promisified_ipc_manager_1 = require("../dist/agents/promisified_ipc_manager");
 var mocha_1 = require("mocha");
-var onMessage = {};
-var wrapper = promisified_ipc_manager_1.IPC_Promisify(child_process_1.fork(__dirname + "/child.js"), {});
+var uuid_1 = require("uuid");
+var secret = uuid_1.v4();
+var delayFactor = 0.25;
+var milliseconds = 10000;
+function onRequestSecret() {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            return [2 /*return*/, new Promise(function (resolve) { return setTimeout(function () { return resolve(secret); }, milliseconds * delayFactor); })];
+        });
+    });
+}
+var localHandlers = { requestSecret: [onRequestSecret] };
+var child = child_process_1.fork(__dirname + "/child.js");
+var manager = promisified_ipc_manager_1.manage(child, localHandlers);
 mocha_1.describe("emitPromise functionality test", function () {
-    it("should take more than 10000 milliseconds to return from the promise message", function () {
+    it("should take the appropriate duration to return the promised message", function () {
         return __awaiter(this, void 0, void 0, function () {
-            var before, parentPid, childPid, seconds, _a, response, error, elapsed;
+            var before, parentPid, childPid, _a, response, error, elapsed;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
                         this.timeout(0);
                         before = Date.now();
                         parentPid = process.pid;
-                        childPid = wrapper.target.pid;
-                        seconds = 10;
-                        return [4 /*yield*/, wrapper.emitPromise("wait", { seconds: seconds, parentPid: parentPid })];
+                        childPid = child.pid;
+                        return [4 /*yield*/, manager.emit("wait", { milliseconds: milliseconds, parentPid: parentPid })];
                     case 1:
                         _a = _b.sent(), response = _a.results[0], error = _a.error;
                         elapsed = Date.now() - before;
-                        chai_1.expect(elapsed).to.be.greaterThan(10000);
-                        chai_1.expect(response).to.be.equal("Hey, " + parentPid + "! What a long wait that was. I'm " + childPid + ".");
-                        chai_1.expect(error).to.be.equal(undefined);
+                        chai_1.expect(elapsed, "The promise resolved too early.").to.be.greaterThan((1 + delayFactor) * milliseconds);
+                        chai_1.expect(response, "The response from the child was malformed.").to.be.equal("Hey, " + parentPid + "! What a long wait that was. I'm " + childPid + ". Your secret is " + secret);
+                        chai_1.expect(error, "An unexpected error occurred.").to.be.equal(undefined);
+                        return [2 /*return*/];
+                }
+            });
+        });
+    });
+    it("should resolve the promise early with the appropriate error message", function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var destructionInterval, before, _a, results, _b, name, message, elapsed;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        this.timeout(0);
+                        destructionInterval = milliseconds / 2;
+                        before = Date.now();
+                        setTimeout(manager.destroy, destructionInterval);
+                        return [4 /*yield*/, manager.emit("wait", { milliseconds: milliseconds, parentPid: process.pid })];
+                    case 1:
+                        _a = _c.sent(), results = _a.results, _b = _a.error, name = _b.name, message = _b.message;
+                        elapsed = Date.now() - before;
+                        chai_1.expect(elapsed, "The promise resolved too late.").to.be.lessThan(destructionInterval + 50);
+                        chai_1.expect(message, "The expected error did not occur or had wrong message.").to.be.equal("The IPC manager was destroyed before the response could be returned.");
+                        chai_1.expect(name, "The expected error did not occur or had wrong name.").to.be.equal("ManagerDestroyed");
+                        chai_1.expect(results, "There was an unexpected presence of results.").to.be.equal(undefined);
                         return [2 /*return*/];
                 }
             });

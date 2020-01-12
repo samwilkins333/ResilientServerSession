@@ -2,7 +2,7 @@ import { ExitHandler } from "./applied_session_agent";
 import { Configuration, configurationSchema, defaultConfig, Identifiers, colorMapping } from "../utilities/session_config";
 import Repl, { ReplAction } from "../utilities/repl";
 import { isWorker, setupMaster, on, Worker, fork } from "cluster";
-import { IPC_Promisify, MessageHandler } from "./promisified_ipc_manager";
+import { manage, MessageHandler } from "./promisified_ipc_manager";
 import { red, cyan, white, yellow, blue } from "colors";
 import { exec, ExecOptions } from "child_process";
 import { validate, ValidationError } from "jsonschema";
@@ -282,7 +282,7 @@ export class Monitor extends ProcessMessageRouter {
             pollingIntervalSeconds: intervalSeconds,
             session_key: this.key
         });
-        Monitor.IPCManager = IPC_Promisify(this.activeWorker.process, this.handlers);
+        Monitor.IPCManager = manage(this.activeWorker.process, this.handlers);
         this.mainLog(cyan(`spawned new server worker with process id ${this.activeWorker?.process.pid}`));
 
         this.on("kill", ({ reason, graceful, errorCode }) => this.killSession(reason, graceful, errorCode), true);

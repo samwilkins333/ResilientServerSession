@@ -10,4 +10,4 @@ var process_message_router_1 = require("./agents/process_message_router");
 exports.ProcessMessageRouter = process_message_router_1.default;
 var promisified_ipc_manager_1 = require("./agents/promisified_ipc_manager");
 exports.PromisifiedIPCManager = promisified_ipc_manager_1.PromisifiedIPCManager;
-exports.IPC_Promisify = promisified_ipc_manager_1.IPC_Promisify;
+exports.IPC_Promisify = promisified_ipc_manager_1.manage;

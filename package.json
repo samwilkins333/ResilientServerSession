@@ -1,6 +1,6 @@
 {
   "name": "resilient-server-session",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Monitor process oversees server workers to create a persistent, repl-controlled and event-rich session.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
