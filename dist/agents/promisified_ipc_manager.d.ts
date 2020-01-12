@@ -36,7 +36,7 @@ export declare class PromisifiedIPCManager {
      * A convenience wrapper around the standard process emission.
      * Does not wait for a response.
      */
-    emit: (name: string, args?: any) => Promise<boolean | undefined>;
+    emit: (name: string, args?: any) => void;
     /**
      * This routine uniquely identifies each message, then adds a general
      * message listener that waits for a response with the same id before resolving

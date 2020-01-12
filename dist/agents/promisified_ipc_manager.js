@@ -58,9 +58,10 @@ var PromisifiedIPCManager = /** @class */ (function () {
          * A convenience wrapper around the standard process emission.
          * Does not wait for a response.
          */
-        this.emit = function (name, args) { return __awaiter(_this, void 0, void 0, function () { var _a, _b; return __generator(this, function (_c) {
-            return [2 /*return*/, (_b = (_a = this.target).send) === null || _b === void 0 ? void 0 : _b.call(_a, { name: name, args: args })];
-        }); }); };
+        this.emit = function (name, args) {
+            var _a, _b;
+            (_b = (_a = _this.target).send) === null || _b === void 0 ? void 0 : _b.call(_a, { name: name, args: args });
+        };
         /**
          * This routine uniquely identifies each message, then adds a general
          * message listener that waits for a response with the same id before resolving

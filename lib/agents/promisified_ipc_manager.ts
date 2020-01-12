@@ -56,7 +56,9 @@ export class PromisifiedIPCManager {
      * A convenience wrapper around the standard process emission.
      * Does not wait for a response. 
      */
-    public emit = async (name: string, args?: any) => this.target.send?.({ name, args });
+    public emit = (name: string, args?: any): void => {
+        this.target.send?.({ name, args });
+    }
 
     /**
      * This routine uniquely identifies each message, then adds a general

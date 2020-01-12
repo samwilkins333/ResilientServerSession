@@ -57,7 +57,7 @@ export class ServerWorker extends ProcessMessageRouter {
      */
     public emitToMonitor = (name: string, args?: any) => ServerWorker.IPCManager.emit(name, args);
 
-    public emitToMonitorPromise = (name: string, args?: any) => ServerWorker.IPCManager.emitPromise(name, args);
+    public emitToMonitorPromise = <T>(name: string, args?: any) => ServerWorker.IPCManager.emitPromise<T>(name, args);
 
     private constructor(work: Function) {
         super();
