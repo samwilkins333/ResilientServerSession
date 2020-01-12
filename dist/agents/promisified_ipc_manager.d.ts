@@ -64,7 +64,7 @@ export declare class PromisifiedIPCManager {
      * completion response for each of the pending messages, allowing their
      * promises in the caller to resolve.
      */
-    destroy: () => void;
+    destroy: () => Promise<void>;
     /**
      * Dispatches the dummy responses and sets the isDestroyed flag to true.
      */

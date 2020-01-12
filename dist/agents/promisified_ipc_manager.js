@@ -45,6 +45,7 @@ function manage(target, handlers) {
     return new PromisifiedIPCManager(target, handlers);
 }
 exports.manage = manage;
+var destroyEvent = "__destroy__";
 /**
  * This is a wrapper utility class that allows the caller process
  * to emit an event and return a promise that resolves when it and all
@@ -94,13 +95,23 @@ var PromisifiedIPCManager = /** @class */ (function () {
          * promises in the caller to resolve.
          */
         this.destroy = function () {
-            var _a, _b;
-            if (_this.callerIsTarget) {
-                _this.destroyHelper();
-            }
-            else {
-                (_b = (_a = _this.target).send) === null || _b === void 0 ? void 0 : _b.call(_a, { destroy: true });
-            }
+            return new Promise(function (resolve) { return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            if (!this.callerIsTarget) return [3 /*break*/, 1];
+                            this.destroyHelper();
+                            return [3 /*break*/, 3];
+                        case 1: return [4 /*yield*/, this.emit(destroyEvent)];
+                        case 2:
+                            _a.sent();
+                            _a.label = 3;
+                        case 3:
+                            resolve();
+                            return [2 /*return*/];
+                    }
+                });
+            }); });
         };
         /**
          * Dispatches the dummy responses and sets the isDestroyed flag to true.
@@ -161,12 +172,10 @@ var PromisifiedIPCManager = /** @class */ (function () {
         }); }; };
         this.target = target;
         if (handlers) {
+            delete handlers[destroyEvent];
+            handlers[destroyEvent] = [this.destroyHelper];
             this.target.addListener("message", this.generateInternalHandler(handlers));
         }
-        this.target.addListener("message", function (_a) {
-            var destroy = _a.destroy;
-            return destroy === true && _this.destroyHelper();
-        });
     }
     Object.defineProperty(PromisifiedIPCManager.prototype, "callerIsTarget", {
         get: function () {

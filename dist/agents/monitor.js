@@ -144,7 +144,9 @@ var Monitor = /** @class */ (function (_super) {
                             return [4 /*yield*/, this.executeExitHandlers(true)];
                         case 1:
                             _a.sent();
-                            this.killActiveWorker(graceful, true);
+                            return [4 /*yield*/, this.killActiveWorker(graceful, true)];
+                        case 2:
+                            _a.sent();
                             process.exit(errorCode);
                             return [2 /*return*/];
                     }
@@ -290,14 +292,23 @@ var Monitor = /** @class */ (function (_super) {
         _this.killActiveWorker = function (graceful, isSessionEnd) {
             if (graceful === void 0) { graceful = true; }
             if (isSessionEnd === void 0) { isSessionEnd = false; }
-            if (_this.activeWorker && !_this.activeWorker.isDead()) {
-                if (graceful) {
-                    Monitor.IPCManager.emit("manualExit", { isSessionEnd: isSessionEnd });
-                }
-                else {
-                    _this.activeWorker.process.kill();
-                }
-            }
+            return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            if (!(this.activeWorker && !this.activeWorker.isDead())) return [3 /*break*/, 3];
+                            if (!graceful) return [3 /*break*/, 1];
+                            Monitor.IPCManager.emit("manualExit", { isSessionEnd: isSessionEnd });
+                            return [3 /*break*/, 3];
+                        case 1: return [4 /*yield*/, server_worker_1.ServerWorker.IPCManager.destroy()];
+                        case 2:
+                            _a.sent();
+                            this.activeWorker.process.kill();
+                            _a.label = 3;
+                        case 3: return [2 /*return*/];
+                    }
+                });
+            });
         };
         /**
          * Allows the caller to set the port at which the target (be it the server,
@@ -321,29 +332,39 @@ var Monitor = /** @class */ (function (_super) {
          * Kills the current active worker and proceeds to spawn a new worker,
          * feeding in configuration information as environment variables.
          */
-        _this.spawn = function () {
-            var _a;
-            var _b = _this.config, _c = _b.polling, route = _c.route, failureTolerance = _c.failureTolerance, intervalSeconds = _c.intervalSeconds, ports = _b.ports;
-            _this.killActiveWorker();
-            _this.activeWorker = cluster_1.fork({
-                pollingRoute: route,
-                pollingFailureTolerance: failureTolerance,
-                serverPort: ports.server,
-                socketPort: ports.socket,
-                pollingIntervalSeconds: intervalSeconds,
-                session_key: _this.key
+        _this.spawn = function () { return __awaiter(_this, void 0, void 0, function () {
+            var _a, _b, route, failureTolerance, intervalSeconds, ports;
+            var _this = this;
+            var _c;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
+                    case 0:
+                        _a = this.config, _b = _a.polling, route = _b.route, failureTolerance = _b.failureTolerance, intervalSeconds = _b.intervalSeconds, ports = _a.ports;
+                        return [4 /*yield*/, this.killActiveWorker()];
+                    case 1:
+                        _d.sent();
+                        this.activeWorker = cluster_1.fork({
+                            pollingRoute: route,
+                            pollingFailureTolerance: failureTolerance,
+                            serverPort: ports.server,
+                            socketPort: ports.socket,
+                            pollingIntervalSeconds: intervalSeconds,
+                            session_key: this.key
+                        });
+                        Monitor.IPCManager = promisified_ipc_manager_1.manage(this.activeWorker.process, this.handlers);
+                        this.mainLog(colors_1.cyan("spawned new server worker with process id " + ((_c = this.activeWorker) === null || _c === void 0 ? void 0 : _c.process.pid)));
+                        this.on("kill", function (_a) {
+                            var reason = _a.reason, graceful = _a.graceful, errorCode = _a.errorCode;
+                            return _this.killSession(reason, graceful, errorCode);
+                        }, true);
+                        this.on("lifecycle", function (_a) {
+                            var event = _a.event;
+                            return console.log(_this.timestamp(), _this.config.identifiers.worker.text + " lifecycle phase (" + event + ")");
+                        }, true);
+                        return [2 /*return*/];
+                }
             });
-            Monitor.IPCManager = promisified_ipc_manager_1.manage(_this.activeWorker.process, _this.handlers);
-            _this.mainLog(colors_1.cyan("spawned new server worker with process id " + ((_a = _this.activeWorker) === null || _a === void 0 ? void 0 : _a.process.pid)));
-            _this.on("kill", function (_a) {
-                var reason = _a.reason, graceful = _a.graceful, errorCode = _a.errorCode;
-                return _this.killSession(reason, graceful, errorCode);
-            }, true);
-            _this.on("lifecycle", function (_a) {
-                var event = _a.event;
-                return console.log(_this.timestamp(), _this.config.identifiers.worker.text + " lifecycle phase (" + event + ")");
-            }, true);
-        };
+        }); };
         _this.config = _this.loadAndValidateConfiguration();
         _this.initialize(sessionKey);
         _this.repl = _this.initializeRepl();

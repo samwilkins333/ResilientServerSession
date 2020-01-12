@@ -99,7 +99,7 @@ export class Monitor extends ProcessMessageRouter {
         this.mainLog(cyan(`exiting session ${graceful ? "clean" : "immediate"}ly`));
         this.mainLog(`session exit reason: ${(red(reason))}`);
         await this.executeExitHandlers(true);
-        this.killActiveWorker(graceful, true);
+        await this.killActiveWorker(graceful, true);
         process.exit(errorCode);
     }
 
@@ -232,11 +232,12 @@ export class Monitor extends ProcessMessageRouter {
     /**
      * Attempts to kill the active worker gracefully, unless otherwise specified.
      */
-    private killActiveWorker = (graceful = true, isSessionEnd = false): void => {
+    private killActiveWorker = async (graceful = true, isSessionEnd = false): Promise<void> => {
         if (this.activeWorker && !this.activeWorker.isDead()) {
             if (graceful) {
                 Monitor.IPCManager.emit("manualExit", { isSessionEnd });
             } else {
+                await ServerWorker.IPCManager.destroy();
                 this.activeWorker.process.kill();
             }
         }
@@ -264,7 +265,7 @@ export class Monitor extends ProcessMessageRouter {
      * Kills the current active worker and proceeds to spawn a new worker,
      * feeding in configuration information as environment variables.
      */
-    private spawn = (): void => {
+    private spawn = async (): Promise<void> => {
         const {
             polling: {
                 route,
@@ -273,7 +274,7 @@ export class Monitor extends ProcessMessageRouter {
             },
             ports
         } = this.config;
-        this.killActiveWorker();
+        await this.killActiveWorker();
         this.activeWorker = fork({
             pollingRoute: route,
             pollingFailureTolerance: failureTolerance,

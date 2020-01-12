@@ -56,6 +56,8 @@ export interface Response<T = any> {
     error?: ErrorLike;
 }
 
+const destroyEvent = "__destroy__";
+
 /**
  * This is a wrapper utility class that allows the caller process
  * to emit an event and return a promise that resolves when it and all
@@ -72,9 +74,10 @@ export class PromisifiedIPCManager {
     constructor(target: IPCTarget, handlers?: HandlerMap) {
         this.target = target;
         if (handlers) {
+            delete handlers[destroyEvent];
+            handlers[destroyEvent] = [this.destroyHelper];
             this.target.addListener("message", this.generateInternalHandler(handlers));
         }
-        this.target.addListener("message", ({ destroy }) => destroy === true && this.destroyHelper());
     }
 
     /**
@@ -112,11 +115,14 @@ export class PromisifiedIPCManager {
      * promises in the caller to resolve.
      */
     public destroy = () => {
-        if (this.callerIsTarget) {
-            this.destroyHelper();
-        } else {
-            this.target.send?.({ destroy: true });
-        }
+        return new Promise<void>(async resolve => {
+            if (this.callerIsTarget) {
+                this.destroyHelper();
+            } else {
+                await this.emit(destroyEvent);
+            }
+            resolve();
+        });
     }
 
     /**
