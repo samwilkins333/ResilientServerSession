@@ -117,7 +117,7 @@ export class ServerWorker extends ProcessMessageRouter {
         // notify master thread (which will log update in the console) of crash event via IPC
         this.lifecycleNotification(red(`crash event detected @ ${new Date().toUTCString()}`));
         this.lifecycleNotification(red(error.message));
-        ServerWorker.IPCManager.destroy();
+        await ServerWorker.IPCManager.destroy();
         process.exit(1);
     }
 
