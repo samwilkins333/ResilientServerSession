@@ -61,7 +61,7 @@ export class ServerWorker extends ProcessMessageRouter {
 
     private constructor(work: Function) {
         super();
-        ServerWorker.IPCManager = new PromisifiedIPCManager(process, this.route);
+        ServerWorker.IPCManager = new PromisifiedIPCManager(process, this.handlers);
         this.lifecycleNotification(green(`initializing process... ${white(`[${process.execPath} ${process.execArgv.join(" ")}]`)}`));
 
         const { pollingRoute, serverPort, pollingIntervalSeconds, pollingFailureTolerance } = process.env;

@@ -209,7 +209,7 @@ var ServerWorker = /** @class */ (function (_super) {
                 }
             });
         }); };
-        ServerWorker.IPCManager = new promisified_ipc_manager_1.PromisifiedIPCManager(process, _this.route);
+        ServerWorker.IPCManager = new promisified_ipc_manager_1.PromisifiedIPCManager(process, _this.handlers);
         _this.lifecycleNotification(colors_1.green("initializing process... " + colors_1.white("[" + process.execPath + " " + process.execArgv.join(" ") + "]")));
         var _a = process.env, pollingRoute = _a.pollingRoute, serverPort = _a.serverPort, pollingIntervalSeconds = _a.pollingIntervalSeconds, pollingFailureTolerance = _a.pollingFailureTolerance;
         _this.serverPort = Number(serverPort);

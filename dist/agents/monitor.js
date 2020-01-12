@@ -333,7 +333,7 @@ var Monitor = /** @class */ (function (_super) {
                 pollingIntervalSeconds: intervalSeconds,
                 session_key: _this.key
             });
-            Monitor.IPCManager = promisified_ipc_manager_1.IPC_Promisify(_this.activeWorker, _this.route);
+            Monitor.IPCManager = promisified_ipc_manager_1.IPC_Promisify(_this.activeWorker.process, _this.handlers);
             _this.mainLog(colors_1.cyan("spawned new server worker with process id " + ((_a = _this.activeWorker) === null || _a === void 0 ? void 0 : _a.process.pid)));
             _this.on("kill", function (_a) {
                 var reason = _a.reason, graceful = _a.graceful, errorCode = _a.errorCode;

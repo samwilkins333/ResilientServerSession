@@ -282,7 +282,7 @@ export class Monitor extends ProcessMessageRouter {
             pollingIntervalSeconds: intervalSeconds,
             session_key: this.key
         });
-        Monitor.IPCManager = IPC_Promisify(this.activeWorker, this.route);
+        Monitor.IPCManager = IPC_Promisify(this.activeWorker.process, this.handlers);
         this.mainLog(cyan(`spawned new server worker with process id ${this.activeWorker?.process.pid}`));
 
         this.on("kill", ({ reason, graceful, errorCode }) => this.killSession(reason, graceful, errorCode), true);

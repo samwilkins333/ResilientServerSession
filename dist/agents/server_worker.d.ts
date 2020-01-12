@@ -26,13 +26,13 @@ export declare class ServerWorker extends ProcessMessageRouter {
      * server worker (child process). This will also kill
      * this process (child process).
      */
-    killSession: (reason: string, graceful?: boolean, errorCode?: number) => Promise<any>;
+    killSession: (reason: string, graceful?: boolean, errorCode?: number) => Promise<boolean | undefined>;
     /**
      * A convenience wrapper to tell the session monitor (parent process)
      * to carry out the action with the specified message and arguments.
      */
-    emitToMonitor: (name: string, args?: any) => Promise<any>;
-    emitToMonitorPromise: (name: string, args?: any) => Promise<unknown>;
+    emitToMonitor: (name: string, args?: any) => Promise<boolean | undefined>;
+    emitToMonitorPromise: (name: string, args?: any) => Promise<import("./promisified_ipc_manager").Response<any>>;
     private constructor();
     /**
      * Set up message and uncaught exception handlers for this
@@ -47,7 +47,7 @@ export declare class ServerWorker extends ProcessMessageRouter {
     /**
      * Notify master thread (which will log update in the console) of initialization via IPC.
      */
-    lifecycleNotification: (event: string) => Promise<any>;
+    lifecycleNotification: (event: string) => Promise<boolean | undefined>;
     /**
      * Called whenever the process has a reason to terminate, either through an uncaught exception
      * in the process (potentially inconsistent state) or the server cannot be reached.

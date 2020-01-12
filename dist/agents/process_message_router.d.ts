@@ -1,7 +1,7 @@
-import { MessageHandler, PromisifiedIPCManager } from "./promisified_ipc_manager";
+import { MessageHandler, PromisifiedIPCManager, HandlerMap } from "./promisified_ipc_manager";
 export default abstract class ProcessMessageRouter {
     protected static IPCManager: PromisifiedIPCManager;
-    private onMessage;
+    protected handlers: HandlerMap;
     /**
      * Add a listener at this message. When the monitor process
      * receives a message, it will invoke all registered functions.
@@ -14,6 +14,5 @@ export default abstract class ProcessMessageRouter {
     /**
      * Unregister all listeners at this message.
      */
-    clearMessageListeners: (...names: string[]) => undefined[];
-    protected route: MessageHandler;
+    clearMessageListeners: (...names: string[]) => boolean[];
 }

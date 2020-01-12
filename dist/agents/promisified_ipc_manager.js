@@ -41,17 +41,18 @@ var utilities_1 = require("../utilities/utilities");
  * Convenience constructor
  * @param target the process / worker to which to attach the specialized listeners
  */
-function IPC_Promisify(target, router) {
-    return new PromisifiedIPCManager(target, router);
+function IPC_Promisify(target, handlers) {
+    return new PromisifiedIPCManager(target, handlers);
 }
 exports.IPC_Promisify = IPC_Promisify;
+;
 /**
  * This is a wrapper utility class that allows the caller process
  * to emit an event and return a promise that resolves when it and all
  * other processes listening to its emission of this event have completed.
  */
 var PromisifiedIPCManager = /** @class */ (function () {
-    function PromisifiedIPCManager(target, router) {
+    function PromisifiedIPCManager(target, handlers) {
         var _this = this;
         /**
          * A convenience wrapper around the standard process emission.
@@ -72,11 +73,10 @@ var PromisifiedIPCManager = /** @class */ (function () {
                         var _a, _b;
                         var messageId = utilities_1.Utilities.guid();
                         var responseHandler = function (_a) {
-                            var _b = _a.metadata, id = _b.id, isResponse = _b.isResponse, args = _a.args, name = _a.name;
-                            var _c;
+                            var _b = _a.metadata, id = _b.id, isResponse = _b.isResponse, args = _a.args;
                             if (isResponse && id === messageId) {
                                 _this.target.removeListener("message", responseHandler);
-                                resolve((_c = args) === null || _c === void 0 ? void 0 : _c.error);
+                                resolve(args);
                             }
                         };
                         _this.target.addListener("message", responseHandler);
@@ -92,39 +92,46 @@ var PromisifiedIPCManager = /** @class */ (function () {
          * which will ultimately invoke the responseHandler of the original emission and resolve the
          * sender's promise.
          */
-        this.internalHandler = function (router) { return function (_a) {
+        this.internalHandler = function (handlers) { return function (_a) {
             var name = _a.name, args = _a.args, metadata = _a.metadata;
             return __awaiter(_this, void 0, void 0, function () {
-                var error, e_1;
+                var error, results, registered, e_1, response;
                 return __generator(this, function (_b) {
                     switch (_b.label) {
                         case 0:
-                            if (!(name && (!metadata || !metadata.isResponse))) return [3 /*break*/, 5];
+                            if (!(name && (!metadata || !metadata.isResponse))) return [3 /*break*/, 6];
                             error = void 0;
+                            results = void 0;
                             _b.label = 1;
                         case 1:
-                            _b.trys.push([1, 3, , 4]);
-                            return [4 /*yield*/, router({ name: name, args: args })];
+                            _b.trys.push([1, 4, , 5]);
+                            registered = handlers[name];
+                            if (!registered) return [3 /*break*/, 3];
+                            return [4 /*yield*/, Promise.all(registered.map(function (handler) { return handler(args); }))];
                         case 2:
-                            _b.sent();
-                            return [3 /*break*/, 4];
-                        case 3:
+                            results = _b.sent();
+                            _b.label = 3;
+                        case 3: return [3 /*break*/, 5];
+                        case 4:
                             e_1 = _b.sent();
                             error = e_1;
-                            return [3 /*break*/, 4];
-                        case 4:
+                            return [3 /*break*/, 5];
+                        case 5:
                             if (metadata && this.target.send) {
                                 metadata.isResponse = true;
-                                this.target.send({ name: name, args: { error: error }, metadata: metadata });
+                                response = { results: results, error: error };
+                                this.target.send({ name: name, args: response, metadata: metadata });
                             }
-                            _b.label = 5;
-                        case 5: return [2 /*return*/];
+                            _b.label = 6;
+                        case 6: return [2 /*return*/];
                     }
                 });
             });
         }; };
         this.target = target;
-        this.target.addListener("message", this.internalHandler(router));
+        if (handlers) {
+            this.target.addListener("message", this.internalHandler(handlers));
+        }
     }
     return PromisifiedIPCManager;
 }());

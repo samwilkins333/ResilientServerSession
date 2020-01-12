@@ -1,18 +1,18 @@
-import { MessageHandler, PromisifiedIPCManager } from "./promisified_ipc_manager";
+import { MessageHandler, PromisifiedIPCManager, HandlerMap } from "./promisified_ipc_manager";
 
 export default abstract class ProcessMessageRouter {
 
     protected static IPCManager: PromisifiedIPCManager;
-    private onMessage: { [name: string]: MessageHandler[] | undefined } = {};
+    protected handlers: HandlerMap = {};
 
     /**
      * Add a listener at this message. When the monitor process
      * receives a message, it will invoke all registered functions.
      */
     public on = (name: string, handler: MessageHandler, exclusive = false) => {
-        const handlers = this.onMessage[name];
+        const handlers = this.handlers[name];
         if (exclusive || !handlers) {
-            this.onMessage[name] = [handler];
+            this.handlers[name] = [handler];
         } else {
             handlers.push(handler);
         }
@@ -22,7 +22,7 @@ export default abstract class ProcessMessageRouter {
      * Unregister a given listener at this message.
      */
     public off = (name: string, handler: MessageHandler) => {
-        const handlers = this.onMessage[name];
+        const handlers = this.handlers[name];
         if (handlers) {
             const index = handlers.indexOf(handler);
             if (index > -1) {
@@ -34,13 +34,6 @@ export default abstract class ProcessMessageRouter {
     /**
      * Unregister all listeners at this message.
      */
-    public clearMessageListeners = (...names: string[]) => names.map(name => this.onMessage[name] = undefined);
-
-    protected route: MessageHandler = async ({ name, args }) => {
-        const handlers = this.onMessage[name];
-        if (handlers) {
-            await Promise.all(handlers.map(handler => handler(args)));
-        }
-    }
+    public clearMessageListeners = (...names: string[]) => names.map(name => delete this.handlers[name]);
 
 }
