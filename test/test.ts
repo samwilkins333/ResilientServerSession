@@ -16,11 +16,11 @@ describe("emitPromise functionality test", () => {
         const { pid: childPid } = wrapper.target;
         const seconds = 10;
         // console.log("PARENT", seconds, parentPid, childPid);
-        const { results, error } = await wrapper.emitPromise<string>("wait", { seconds, parentPid });
+        const { results: [response], error } = await wrapper.emitPromise<string>("wait", { seconds, parentPid });
         // console.log("PARENT", results, error);
         const elapsed = Date.now() - before;
         expect(elapsed).to.be.greaterThan(10000);
-        expect(results[0]).to.be.equal(`Hey, ${parentPid}! What a long wait that was. I'm ${childPid}.`);
+        expect(response).to.be.equal(`Hey, ${parentPid}! What a long wait that was. I'm ${childPid}.`);
         expect(error).to.be.equal(undefined);
     });
 

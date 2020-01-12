@@ -45,7 +45,7 @@ var wrapper = promisified_ipc_manager_1.IPC_Promisify(child_process_1.fork(__dir
 mocha_1.describe("emitPromise functionality test", function () {
     it("should take more than 10000 milliseconds to return from the promise message", function () {
         return __awaiter(this, void 0, void 0, function () {
-            var before, parentPid, childPid, seconds, _a, results, error, elapsed;
+            var before, parentPid, childPid, seconds, _a, response, error, elapsed;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -56,10 +56,10 @@ mocha_1.describe("emitPromise functionality test", function () {
                         seconds = 10;
                         return [4 /*yield*/, wrapper.emitPromise("wait", { seconds: seconds, parentPid: parentPid })];
                     case 1:
-                        _a = _b.sent(), results = _a.results, error = _a.error;
+                        _a = _b.sent(), response = _a.results[0], error = _a.error;
                         elapsed = Date.now() - before;
                         chai_1.expect(elapsed).to.be.greaterThan(10000);
-                        chai_1.expect(results[0]).to.be.equal("Hey, " + parentPid + "! What a long wait that was. I'm " + childPid + ".");
+                        chai_1.expect(response).to.be.equal("Hey, " + parentPid + "! What a long wait that was. I'm " + childPid + ".");
                         chai_1.expect(error).to.be.equal(undefined);
                         return [2 /*return*/];
                 }
