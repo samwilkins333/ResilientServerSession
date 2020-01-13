@@ -1,11 +1,11 @@
 import { ExitHandler } from "./applied_session_agent";
-import ProcessMessageRouter from "./process_message_router";
+import IPCMessageReceiver from "./process_message_router";
 /**
  * Effectively, each worker repairs the connection to the server by reintroducing a consistent state
  * if its predecessor has died. It itself also polls the server heartbeat, and exits with a notification
  * email if the server encounters an uncaught exception or if the server cannot be reached.
  */
-export declare class ServerWorker extends ProcessMessageRouter {
+export declare class ServerWorker extends IPCMessageReceiver {
     private static count;
     private shouldServerBeResponsive;
     private exitHandlers;
@@ -37,7 +37,7 @@ export declare class ServerWorker extends ProcessMessageRouter {
      * Set up message and uncaught exception handlers for this
      * server process.
      */
-    private configureProcess;
+    protected configureInternalHandlers: () => void;
     /**
      * Execute the list of functions registered to be called
      * whenever the process exits.

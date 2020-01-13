@@ -94,7 +94,7 @@ var ServerWorker = /** @class */ (function (_super) {
          * Set up message and uncaught exception handlers for this
          * server process.
          */
-        _this.configureProcess = function () {
+        _this.configureInternalHandlers = function () {
             // updates the local values of variables to the those sent from master
             _this.on("updatePollingInterval", function (_a) {
                 var newPollingIntervalSeconds = _a.newPollingIntervalSeconds;
@@ -216,14 +216,13 @@ var ServerWorker = /** @class */ (function (_super) {
                 }
             });
         }); };
-        ServerWorker.IPCManager = new promisified_ipc_manager_1.PromisifiedIPCManager(process, _this.handlers);
+        ServerWorker.IPCManager = promisified_ipc_manager_1.manage(process, _this.handlers);
         _this.lifecycleNotification(colors_1.green("initializing process... " + colors_1.white("[" + process.execPath + " " + process.execArgv.join(" ") + "]")));
         var _a = process.env, pollingRoute = _a.pollingRoute, serverPort = _a.serverPort, pollingIntervalSeconds = _a.pollingIntervalSeconds, pollingFailureTolerance = _a.pollingFailureTolerance;
         _this.serverPort = Number(serverPort);
         _this.pollingIntervalSeconds = Number(pollingIntervalSeconds);
         _this.pollingFailureTolerance = Number(pollingFailureTolerance);
         _this.pollTarget = "http://localhost:" + serverPort + pollingRoute;
-        _this.configureProcess();
         work();
         _this.pollServer();
         return _this;

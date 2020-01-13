@@ -1,7 +1,7 @@
 import { ExitHandler } from "./applied_session_agent";
 import { isMaster } from "cluster";
-import { PromisifiedIPCManager } from "./promisified_ipc_manager";
-import ProcessMessageRouter from "./process_message_router";
+import { manage } from "./promisified_ipc_manager";
+import IPCMessageReceiver from "./process_message_router";
 import { red, green, white, yellow } from "colors";
 import { get } from "request-promise";
 import { Monitor } from "./monitor";
@@ -11,7 +11,7 @@ import { Monitor } from "./monitor";
  * if its predecessor has died. It itself also polls the server heartbeat, and exits with a notification
  * email if the server encounters an uncaught exception or if the server cannot be reached.
  */
-export class ServerWorker extends ProcessMessageRouter {
+export class ServerWorker extends IPCMessageReceiver {
     private static count = 0;
     private shouldServerBeResponsive = false;
     private exitHandlers: ExitHandler[] = [];
@@ -59,7 +59,7 @@ export class ServerWorker extends ProcessMessageRouter {
 
     private constructor(work: Function) {
         super();
-        ServerWorker.IPCManager = new PromisifiedIPCManager(process, this.handlers);
+        ServerWorker.IPCManager = manage(process, this.handlers);
         this.lifecycleNotification(green(`initializing process... ${white(`[${process.execPath} ${process.execArgv.join(" ")}]`)}`));
 
         const { pollingRoute, serverPort, pollingIntervalSeconds, pollingFailureTolerance } = process.env;
@@ -68,7 +68,6 @@ export class ServerWorker extends ProcessMessageRouter {
         this.pollingFailureTolerance = Number(pollingFailureTolerance);
         this.pollTarget = `http://localhost:${serverPort}${pollingRoute}`;
 
-        this.configureProcess();
         work();
         this.pollServer();
     }
@@ -77,7 +76,7 @@ export class ServerWorker extends ProcessMessageRouter {
      * Set up message and uncaught exception handlers for this
      * server process.
      */
-    private configureProcess = () => {
+    protected configureInternalHandlers = () => {
         // updates the local values of variables to the those sent from master
         this.on("updatePollingInterval", ({ newPollingIntervalSeconds }) => this.pollingIntervalSeconds = newPollingIntervalSeconds);
         this.on("manualExit", async ({ isSessionEnd }) => {

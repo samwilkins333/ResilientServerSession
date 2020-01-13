@@ -3,12 +3,12 @@ import { ExitHandler } from "./applied_session_agent";
 import { ReplAction } from "../utilities/repl";
 import { MessageHandler } from "./promisified_ipc_manager";
 import { ExecOptions } from "child_process";
-import ProcessMessageRouter from "./process_message_router";
+import IPCMessageReceiver from "./process_message_router";
 /**
  * Validates and reads the configuration file, accordingly builds a child process factory
  * and spawns off an initial process that will respawn as predecessors die.
  */
-export declare class Monitor extends ProcessMessageRouter {
+export declare class Monitor extends IPCMessageReceiver {
     private static count;
     private finalized;
     private exitHandlers;
@@ -18,7 +18,8 @@ export declare class Monitor extends ProcessMessageRouter {
     private repl;
     static Create(sessionKey: string): Monitor;
     private constructor();
-    private initialize;
+    protected configureInternalHandlers: () => void;
+    private initializeClusterFunctions;
     finalize: () => void;
     readonly coreHooks: Readonly<{
         onCrashDetected: (listener: MessageHandler<{

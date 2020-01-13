@@ -1,17 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var ProcessMessageRouter = /** @class */ (function () {
-    function ProcessMessageRouter() {
+var IPCMessageReceiver = /** @class */ (function () {
+    function IPCMessageReceiver() {
         var _this = this;
         this.handlers = {};
         /**
          * Add a listener at this message. When the monitor process
          * receives a message, it will invoke all registered functions.
          */
-        this.on = function (name, handler, exclusive) {
-            if (exclusive === void 0) { exclusive = false; }
+        this.on = function (name, handler) {
             var handlers = _this.handlers[name];
-            if (exclusive || !handlers) {
+            if (!handlers) {
                 _this.handlers[name] = [handler];
             }
             else {
@@ -40,7 +39,8 @@ var ProcessMessageRouter = /** @class */ (function () {
             }
             return names.map(function (name) { return delete _this.handlers[name]; });
         };
+        (function () { return _this.configureInternalHandlers(); })();
     }
-    return ProcessMessageRouter;
+    return IPCMessageReceiver;
 }());
-exports.default = ProcessMessageRouter;
+exports.default = IPCMessageReceiver;

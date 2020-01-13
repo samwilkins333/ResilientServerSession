@@ -1,17 +1,23 @@
 import { MessageHandler, PromisifiedIPCManager, HandlerMap } from "./promisified_ipc_manager";
 
-export default abstract class ProcessMessageRouter {
+export default abstract class IPCMessageReceiver {
 
     protected static IPCManager: PromisifiedIPCManager;
     protected handlers: HandlerMap = {};
+
+    protected abstract configureInternalHandlers: () => void;
+
+    constructor() {
+        (() => this.configureInternalHandlers())();
+    }
 
     /**
      * Add a listener at this message. When the monitor process
      * receives a message, it will invoke all registered functions.
      */
-    public on = (name: string, handler: MessageHandler, exclusive = false) => {
+    public on = (name: string, handler: MessageHandler) => {
         const handlers = this.handlers[name];
-        if (exclusive || !handlers) {
+        if (!handlers) {
             this.handlers[name] = [handler];
         } else {
             handlers.push(handler);

@@ -8,14 +8,14 @@ import { exec, ExecOptions } from "child_process";
 import { validate, ValidationError } from "jsonschema";
 import { Utilities } from "../utilities/utilities";
 import { readFileSync } from "fs";
-import ProcessMessageRouter from "./process_message_router";
+import IPCMessageReceiver from "./process_message_router";
 import { ServerWorker } from "./server_worker";
 
 /**
  * Validates and reads the configuration file, accordingly builds a child process factory
  * and spawns off an initial process that will respawn as predecessors die.
  */
-export class Monitor extends ProcessMessageRouter {
+export class Monitor extends IPCMessageReceiver {
     private static count = 0;
     private finalized = false;
     private exitHandlers: ExitHandler[] = [];
@@ -42,19 +42,14 @@ export class Monitor extends ProcessMessageRouter {
 
     private constructor(sessionKey: string) {
         super();
+        console.log(this.timestamp(), cyan("initializing session..."));
+        this.key = sessionKey;
         this.config = this.loadAndValidateConfiguration();
-        this.initialize(sessionKey);
+        this.initializeClusterFunctions();
         this.repl = this.initializeRepl();
     }
 
-    private initialize = (sessionKey: string) => {
-        console.log(this.timestamp(), cyan("initializing session..."));
-        this.key = sessionKey;
-
-        // determines whether or not we see the compilation / initialization / runtime output of each child server process
-        const output = this.config.showServerOutput ? "inherit" : "ignore";
-        setupMaster({ stdio: ["ignore", output, output, "ipc"] });
-
+    protected configureInternalHandlers = () => {
         // handle exceptions in the master thread - there shouldn't be many of these
         // the IPC (inter process communication) channel closed exception can't seem
         // to be caught in a try catch, and is inconsequential, so it is ignored
@@ -66,6 +61,15 @@ export class Monitor extends ProcessMessageRouter {
                 }
             }
         });
+
+        this.on("kill", ({ reason, graceful, errorCode }) => this.killSession(reason, graceful, errorCode));
+        this.on("lifecycle", ({ event }) => console.log(this.timestamp(), `${this.config.identifiers.worker.text} lifecycle phase (${event})`));
+    }
+
+    private initializeClusterFunctions = () => {
+        // determines whether or not we see the compilation / initialization / runtime output of each child server process
+        const output = this.config.showServerOutput ? "inherit" : "ignore";
+        setupMaster({ stdio: ["ignore", output, output, "ipc"] });
 
         // a helpful cluster event called on the master thread each time a child process exits
         on("exit", ({ process: { pid } }, code, signal) => {
@@ -266,28 +270,18 @@ export class Monitor extends ProcessMessageRouter {
      * feeding in configuration information as environment variables.
      */
     private spawn = async (): Promise<void> => {
-        const {
-            polling: {
-                route,
-                failureTolerance,
-                intervalSeconds
-            },
-            ports
-        } = this.config;
         await this.killActiveWorker();
+        const { config: { polling, ports }, key } = this;
         this.activeWorker = fork({
-            pollingRoute: route,
-            pollingFailureTolerance: failureTolerance,
+            pollingRoute: polling.route,
+            pollingFailureTolerance: polling.failureTolerance,
             serverPort: ports.server,
             socketPort: ports.socket,
-            pollingIntervalSeconds: intervalSeconds,
-            session_key: this.key
+            pollingIntervalSeconds: polling.intervalSeconds,
+            session_key: key
         });
         Monitor.IPCManager = manage(this.activeWorker.process, this.handlers);
         this.mainLog(cyan(`spawned new server worker with process id ${this.activeWorker?.process.pid}`));
-
-        this.on("kill", ({ reason, graceful, errorCode }) => this.killSession(reason, graceful, errorCode), true);
-        this.on("lifecycle", ({ event }) => console.log(this.timestamp(), `${this.config.identifiers.worker.text} lifecycle phase (${event})`), true);
     }
 
 }

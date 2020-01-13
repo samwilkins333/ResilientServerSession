@@ -88,12 +88,7 @@ var Monitor = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this.finalized = false;
         _this.exitHandlers = [];
-        _this.initialize = function (sessionKey) {
-            console.log(_this.timestamp(), colors_1.cyan("initializing session..."));
-            _this.key = sessionKey;
-            // determines whether or not we see the compilation / initialization / runtime output of each child server process
-            var output = _this.config.showServerOutput ? "inherit" : "ignore";
-            cluster_1.setupMaster({ stdio: ["ignore", output, output, "ipc"] });
+        _this.configureInternalHandlers = function () {
             // handle exceptions in the master thread - there shouldn't be many of these
             // the IPC (inter process communication) channel closed exception can't seem
             // to be caught in a try catch, and is inconsequential, so it is ignored
@@ -106,6 +101,19 @@ var Monitor = /** @class */ (function (_super) {
                     }
                 }
             });
+            _this.on("kill", function (_a) {
+                var reason = _a.reason, graceful = _a.graceful, errorCode = _a.errorCode;
+                return _this.killSession(reason, graceful, errorCode);
+            });
+            _this.on("lifecycle", function (_a) {
+                var event = _a.event;
+                return console.log(_this.timestamp(), _this.config.identifiers.worker.text + " lifecycle phase (" + event + ")");
+            });
+        };
+        _this.initializeClusterFunctions = function () {
+            // determines whether or not we see the compilation / initialization / runtime output of each child server process
+            var output = _this.config.showServerOutput ? "inherit" : "ignore";
+            cluster_1.setupMaster({ stdio: ["ignore", output, output, "ipc"] });
             // a helpful cluster event called on the master thread each time a child process exits
             cluster_1.on("exit", function (_a, code, signal) {
                 var pid = _a.process.pid;
@@ -333,40 +341,32 @@ var Monitor = /** @class */ (function (_super) {
          * feeding in configuration information as environment variables.
          */
         _this.spawn = function () { return __awaiter(_this, void 0, void 0, function () {
-            var _a, _b, route, failureTolerance, intervalSeconds, ports;
-            var _this = this;
+            var _a, _b, polling, ports, key;
             var _c;
             return __generator(this, function (_d) {
                 switch (_d.label) {
-                    case 0:
-                        _a = this.config, _b = _a.polling, route = _b.route, failureTolerance = _b.failureTolerance, intervalSeconds = _b.intervalSeconds, ports = _a.ports;
-                        return [4 /*yield*/, this.killActiveWorker()];
+                    case 0: return [4 /*yield*/, this.killActiveWorker()];
                     case 1:
                         _d.sent();
+                        _a = this, _b = _a.config, polling = _b.polling, ports = _b.ports, key = _a.key;
                         this.activeWorker = cluster_1.fork({
-                            pollingRoute: route,
-                            pollingFailureTolerance: failureTolerance,
+                            pollingRoute: polling.route,
+                            pollingFailureTolerance: polling.failureTolerance,
                             serverPort: ports.server,
                             socketPort: ports.socket,
-                            pollingIntervalSeconds: intervalSeconds,
-                            session_key: this.key
+                            pollingIntervalSeconds: polling.intervalSeconds,
+                            session_key: key
                         });
                         Monitor.IPCManager = promisified_ipc_manager_1.manage(this.activeWorker.process, this.handlers);
                         this.mainLog(colors_1.cyan("spawned new server worker with process id " + ((_c = this.activeWorker) === null || _c === void 0 ? void 0 : _c.process.pid)));
-                        this.on("kill", function (_a) {
-                            var reason = _a.reason, graceful = _a.graceful, errorCode = _a.errorCode;
-                            return _this.killSession(reason, graceful, errorCode);
-                        }, true);
-                        this.on("lifecycle", function (_a) {
-                            var event = _a.event;
-                            return console.log(_this.timestamp(), _this.config.identifiers.worker.text + " lifecycle phase (" + event + ")");
-                        }, true);
                         return [2 /*return*/];
                 }
             });
         }); };
+        console.log(_this.timestamp(), colors_1.cyan("initializing session..."));
+        _this.key = sessionKey;
         _this.config = _this.loadAndValidateConfiguration();
-        _this.initialize(sessionKey);
+        _this.initializeClusterFunctions();
         _this.repl = _this.initializeRepl();
         return _this;
     }
