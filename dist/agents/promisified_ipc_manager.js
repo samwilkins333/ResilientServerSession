@@ -117,13 +117,15 @@ var PromisifiedIPCManager = /** @class */ (function () {
          * Dispatches the dummy responses and sets the isDestroyed flag to true.
          */
         this.destroyHelper = function () {
+            var pendingMessages = _this.pendingMessages;
             _this.isDestroyed = true;
-            Object.keys(_this.pendingMessages).forEach(function (id) {
+            Object.keys(pendingMessages).forEach(function (id) {
                 var _a, _b;
                 var error = { name: "ManagerDestroyed", message: "The IPC manager was destroyed before the response could be returned." };
-                var message = { name: _this.pendingMessages[id], args: { error: error }, metadata: { id: id, isResponse: true } };
+                var message = { name: pendingMessages[id], args: { error: error }, metadata: { id: id, isResponse: true } };
                 (_b = (_a = _this.target).send) === null || _b === void 0 ? void 0 : _b.call(_a, message);
             });
+            _this.pendingMessages = {};
         };
         /**
          * This routine receives a uniquely identified message. If the message is itself a response,
@@ -172,7 +174,6 @@ var PromisifiedIPCManager = /** @class */ (function () {
         }); }; };
         this.target = target;
         if (handlers) {
-            delete handlers[destroyEvent];
             handlers[destroyEvent] = [this.destroyHelper];
             this.target.addListener("message", this.generateInternalHandler(handlers));
         }

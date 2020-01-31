@@ -3,7 +3,6 @@ export default abstract class IPCMessageReceiver {
     protected static IPCManager: PromisifiedIPCManager;
     protected handlers: HandlerMap;
     protected abstract configureInternalHandlers: () => void;
-    constructor();
     /**
      * Add a listener at this message. When the monitor process
      * receives a message, it will invoke all registered functions.

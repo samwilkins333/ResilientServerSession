@@ -84,7 +84,7 @@ var server_worker_1 = require("./server_worker");
  */
 var Monitor = /** @class */ (function (_super) {
     __extends(Monitor, _super);
-    function Monitor(sessionKey) {
+    function Monitor() {
         var _this = _super.call(this) || this;
         _this.finalized = false;
         _this.exitHandlers = [];
@@ -123,11 +123,12 @@ var Monitor = /** @class */ (function (_super) {
                 _this.spawn();
             });
         };
-        _this.finalize = function () {
+        _this.finalize = function (sessionKey) {
             if (_this.finalized) {
                 throw new Error("Session monitor is already finalized");
             }
             _this.finalized = true;
+            _this.key = sessionKey;
             _this.spawn();
         };
         _this.coreHooks = Object.freeze({
@@ -364,13 +365,13 @@ var Monitor = /** @class */ (function (_super) {
             });
         }); };
         console.log(_this.timestamp(), colors_1.cyan("initializing session..."));
-        _this.key = sessionKey;
+        _this.configureInternalHandlers();
         _this.config = _this.loadAndValidateConfiguration();
         _this.initializeClusterFunctions();
         _this.repl = _this.initializeRepl();
         return _this;
     }
-    Monitor.Create = function (sessionKey) {
+    Monitor.Create = function () {
         if (cluster_1.isWorker) {
             server_worker_1.ServerWorker.IPCManager.emit("kill", {
                 reason: "cannot create a monitor on the worker process.",
@@ -384,7 +385,7 @@ var Monitor = /** @class */ (function (_super) {
             process.exit(1);
         }
         else {
-            return new Monitor(sessionKey);
+            return new Monitor();
         }
     };
     Monitor.count = 0;

@@ -59,6 +59,7 @@ export class ServerWorker extends IPCMessageReceiver {
 
     private constructor(work: Function) {
         super();
+        this.configureInternalHandlers();
         ServerWorker.IPCManager = manage(process, this.handlers);
         this.lifecycleNotification(green(`initializing process... ${white(`[${process.execPath} ${process.execArgv.join(" ")}]`)}`));
 

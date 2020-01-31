@@ -38,7 +38,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var cluster_1 = require("cluster");
 var monitor_1 = require("./monitor");
-var utilities_1 = require("../utilities/utilities");
 var AppliedSessionAgent = /** @class */ (function () {
     function AppliedSessionAgent() {
         var _this = this;
@@ -84,11 +83,11 @@ var AppliedSessionAgent = /** @class */ (function () {
                         if (!!this.launched) return [3 /*break*/, 5];
                         this.launched = true;
                         if (!cluster_1.isMaster) return [3 /*break*/, 2];
-                        sessionKey = utilities_1.Utilities.guid();
-                        return [4 /*yield*/, this.initializeMonitor(this.sessionMonitorRef = monitor_1.Monitor.Create(sessionKey), sessionKey)];
+                        this.sessionMonitorRef = monitor_1.Monitor.Create();
+                        return [4 /*yield*/, this.initializeMonitor(this.sessionMonitorRef)];
                     case 1:
-                        _b.sent();
-                        this.sessionMonitorRef.finalize();
+                        sessionKey = _b.sent();
+                        this.sessionMonitorRef.finalize(sessionKey);
                         return [3 /*break*/, 4];
                     case 2:
                         _a = this;

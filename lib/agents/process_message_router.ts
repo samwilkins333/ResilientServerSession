@@ -7,10 +7,6 @@ export default abstract class IPCMessageReceiver {
 
     protected abstract configureInternalHandlers: () => void;
 
-    constructor() {
-        (() => this.configureInternalHandlers())();
-    }
-
     /**
      * Add a listener at this message. When the monitor process
      * receives a message, it will invoke all registered functions.

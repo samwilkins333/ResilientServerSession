@@ -39,7 +39,6 @@ var IPCMessageReceiver = /** @class */ (function () {
             }
             return names.map(function (name) { return delete _this.handlers[name]; });
         };
-        (function () { return _this.configureInternalHandlers(); })();
     }
     return IPCMessageReceiver;
 }());

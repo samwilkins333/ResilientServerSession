@@ -24,7 +24,7 @@ export class Monitor extends IPCMessageReceiver {
     private key: string | undefined;
     private repl: Repl;
 
-    public static Create(sessionKey: string) {
+    public static Create() {
         if (isWorker) {
             ServerWorker.IPCManager.emit("kill", {
                 reason: "cannot create a monitor on the worker process.",
@@ -36,14 +36,14 @@ export class Monitor extends IPCMessageReceiver {
             console.error(red("cannot create more than one monitor."));
             process.exit(1);
         } else {
-            return new Monitor(sessionKey);
+            return new Monitor();
         }
     }
 
-    private constructor(sessionKey: string) {
+    private constructor() {
         super();
         console.log(this.timestamp(), cyan("initializing session..."));
-        this.key = sessionKey;
+        this.configureInternalHandlers();
         this.config = this.loadAndValidateConfiguration();
         this.initializeClusterFunctions();
         this.repl = this.initializeRepl();
@@ -80,11 +80,12 @@ export class Monitor extends IPCMessageReceiver {
         });
     }
 
-    public finalize = (): void => {
+    public finalize = (sessionKey: string): void => {
         if (this.finalized) {
             throw new Error("Session monitor is already finalized");
         }
         this.finalized = true;
+        this.key = sessionKey;
         this.spawn();
     }
 

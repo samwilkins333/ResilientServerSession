@@ -12,7 +12,7 @@ export {
     IPCMessageReceiver,
     PromisifiedIPCManager,
     IPCTarget,
-    manage as IPC_Promisify,
+    manage,
     Message,
     HandlerMap,
     MessageHandler

@@ -74,7 +74,6 @@ export class PromisifiedIPCManager {
     constructor(target: IPCTarget, handlers?: HandlerMap) {
         this.target = target;
         if (handlers) {
-            delete handlers[destroyEvent];
             handlers[destroyEvent] = [this.destroyHelper];
             this.target.addListener("message", this.generateInternalHandler(handlers));
         }
@@ -129,12 +128,14 @@ export class PromisifiedIPCManager {
      * Dispatches the dummy responses and sets the isDestroyed flag to true.
      */
     private destroyHelper = () => {
+        const { pendingMessages } = this;
         this.isDestroyed = true;
-        Object.keys(this.pendingMessages).forEach(id => {
+        Object.keys(pendingMessages).forEach(id => {
             const error: ErrorLike = { name: "ManagerDestroyed", message: "The IPC manager was destroyed before the response could be returned." };
-            const message: InternalMessage = { name: this.pendingMessages[id], args: { error }, metadata: { id, isResponse: true } };
+            const message: InternalMessage = { name: pendingMessages[id], args: { error }, metadata: { id, isResponse: true } };
             this.target.send?.(message)
         });
+        this.pendingMessages = {};
     }
 
     /**

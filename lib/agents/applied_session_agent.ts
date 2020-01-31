@@ -9,7 +9,7 @@ export abstract class AppliedSessionAgent {
 
     // the following two methods allow the developer to create a custom
     // session and use the built in customization options for each thread
-    protected abstract async initializeMonitor(monitor: Monitor, key: string): Promise<void>;
+    protected abstract async initializeMonitor(monitor: Monitor): Promise<string>;
     protected abstract async initializeServerWorker(): Promise<ServerWorker>;
 
     private launched = false;
@@ -44,9 +44,9 @@ export abstract class AppliedSessionAgent {
         if (!this.launched) {
             this.launched = true;
             if (isMaster) {
-                const sessionKey = Utilities.guid();
-                await this.initializeMonitor(this.sessionMonitorRef = Monitor.Create(sessionKey), sessionKey);
-                this.sessionMonitorRef.finalize();
+                this.sessionMonitorRef = Monitor.Create()
+                const sessionKey = await this.initializeMonitor(this.sessionMonitorRef);
+                this.sessionMonitorRef.finalize(sessionKey);
             } else {
                 this.serverWorkerRef = await this.initializeServerWorker();
             }

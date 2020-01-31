@@ -16,11 +16,11 @@ export declare class Monitor extends IPCMessageReceiver {
     private activeWorker;
     private key;
     private repl;
-    static Create(sessionKey: string): Monitor;
+    static Create(): Monitor;
     private constructor();
     protected configureInternalHandlers: () => void;
     private initializeClusterFunctions;
-    finalize: () => void;
+    finalize: (sessionKey: string) => void;
     readonly coreHooks: Readonly<{
         onCrashDetected: (listener: MessageHandler<{
             error: Error;
