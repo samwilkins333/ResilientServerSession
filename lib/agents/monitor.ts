@@ -242,7 +242,7 @@ export class Monitor extends IPCMessageReceiver {
             if (graceful) {
                 Monitor.IPCManager.emit("manualExit", { isSessionEnd });
             } else {
-                await ServerWorker.IPCManager.destroy();
+                await ServerWorker.IPCManager?.destroy();
                 this.activeWorker.process.kill();
             }
         }
