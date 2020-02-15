@@ -1,13 +1,14 @@
 {
   "name": "resilient-server-session",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Monitor process oversees server workers to create a persistent, repl-controlled and event-rich session.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "_publish": "npm run build && npm run test && npm publish",
     "build": "tsc",
-    "test": "tsc ./test/*.ts && mocha --exit"
+    "test": "tsc ./test/*.ts && mocha --exit",
+    "repl": "npx ts-node ./test/repl_test.ts"
   },
   "repository": {
     "type": "git",

@@ -9,8 +9,8 @@ export abstract class AppliedSessionAgent {
 
     // the following two methods allow the developer to create a custom
     // session and use the built in customization options for each thread
-    protected abstract async initializeMonitor(monitor: Monitor): Promise<string>;
-    protected abstract async initializeServerWorker(): Promise<ServerWorker>;
+    protected abstract initializeMonitor(monitor: Monitor): string | Promise<string>;
+    protected abstract initializeServerWorker(): ServerWorker | Promise<ServerWorker>;
 
     private launched = false;
 
